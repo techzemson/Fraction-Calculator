@@ -13,8 +13,10 @@ import {
   ArrowLeftRight,
   Repeat2,
   History,
-  Trash2
+  Trash2,
+  BookOpen
 } from 'lucide-react';
+import { jsPDF } from "jspdf";
 import { FractionData, OperationType, CalculationResult, VisualizationData, AIExplanation, HistoryItem } from './types';
 import { calculateFraction } from './utils/math';
 import { generateExplanation } from './services/geminiService';
@@ -191,7 +193,9 @@ const App: React.FC = () => {
       setIsAnalyzing(false);
       
       // Scroll to result
-      document.getElementById('result-section')?.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => {
+          document.getElementById('result-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
 
     }, 800); 
   };
@@ -216,32 +220,93 @@ const App: React.FC = () => {
      alert("Copied to clipboard!");
   };
 
-  const downloadResult = () => {
+  const shareScenario = (text: string) => {
+      if (navigator.share) {
+          navigator.share({
+              title: 'Fraction Scenario',
+              text: text,
+          }).catch(console.error);
+      } else {
+          copyToClipboard(text);
+      }
+  };
+
+  const downloadPDF = () => {
     if (!result) return;
-    const content = `
-    FRACTION CALCULATOR REPORT
-    ----------------
-    Operation: ${op.toUpperCase()}
-    Input 1: ${f1.whole} ${f1.numerator}/${f1.denominator}
-    Input 2: ${f2.whole} ${f2.numerator}/${f2.denominator}
     
-    RESULT:
-    Mixed: ${result.fraction.whole} ${result.fraction.numerator}/${result.fraction.denominator}
-    Improper: ${result.improper.numerator}/${result.improper.denominator}
-    Decimal: ${result.decimal}
-    Percentage: ${result.percentage}%
+    const doc = new jsPDF();
+    const lineHeight = 10;
+    let y = 20;
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(37, 99, 235); // Blue color
+    doc.text("Fraction Calculator Report", 10, y);
+    y += lineHeight * 2;
+
+    // Inputs
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Operation: ${op.toUpperCase()}`, 10, y);
+    y += lineHeight;
+    doc.text(`Input 1: ${f1.whole ? f1.whole : ''} ${f1.numerator}/${f1.denominator}`, 10, y);
+    y += lineHeight;
+    doc.text(`Input 2: ${f2.whole ? f2.whole : ''} ${f2.numerator}/${f2.denominator}`, 10, y);
+    y += lineHeight * 1.5;
+
+    // Result
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("RESULT:", 10, y);
+    y += lineHeight;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(14);
+    doc.text(`Mixed Fraction: ${result.fraction.whole ? result.fraction.whole : ''} ${result.fraction.numerator}/${result.fraction.denominator}`, 10, y);
+    y += lineHeight;
+    doc.text(`Improper Fraction: ${result.improper.numerator}/${result.improper.denominator}`, 10, y);
+    y += lineHeight;
+    doc.text(`Decimal: ${result.decimal}`, 10, y);
+    y += lineHeight;
+    doc.text(`Percentage: ${result.percentage}%`, 10, y);
+    y += lineHeight * 2;
+
+    // Steps
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("STEPS TO SOLVE:", 10, y);
+    y += lineHeight;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
     
-    STEPS:
-    ${result.steps.join('\n')}
-    `;
-    
-    const element = document.createElement("a");
-    const file = new Blob([content], {type: 'text/plain'});
-    element.href = URL.createObjectURL(file);
-    element.download = "fraction_result.txt";
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+    result.steps.forEach((step, index) => {
+        const splitText = doc.splitTextToSize(`${index + 1}. ${step}`, 180);
+        if (y + (splitText.length * 7) > 280) {
+            doc.addPage();
+            y = 20;
+        }
+        doc.text(splitText, 10, y);
+        y += (splitText.length * 7) + 3;
+    });
+
+    if (explanation) {
+        doc.addPage();
+        y = 20;
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("AI Explanation & Scenario", 10, y);
+        y += lineHeight;
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        const expLines = doc.splitTextToSize(`Explanation: ${explanation.simpleExplanation}`, 180);
+        doc.text(expLines, 10, y);
+        y += (expLines.length * 7) + 10;
+        
+        const scenLines = doc.splitTextToSize(`Scenario: ${explanation.realWorldScenario}`, 180);
+        doc.text(scenLines, 10, y);
+    }
+
+    doc.save("fraction_calculator_report.pdf");
   };
 
   return (
@@ -257,7 +322,6 @@ const App: React.FC = () => {
               <h1 className="text-xl font-bold tracking-tight text-slate-900">Fraction Calculator</h1>
             </div>
           </div>
-          {/* History Toggle (Mobile) could go here */}
         </div>
       </header>
 
@@ -317,9 +381,9 @@ const App: React.FC = () => {
                 onClick={handleCalculate}
                 disabled={isAnalyzing}
                 className={`
-                  group relative px-10 py-4 bg-slate-900 
-                  text-white text-lg font-bold rounded-xl shadow-xl shadow-slate-900/20
-                  hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all duration-300
+                  group relative px-10 py-4 bg-blue-600 
+                  text-white text-lg font-bold rounded-xl shadow-xl shadow-blue-600/30
+                  hover:shadow-2xl hover:bg-blue-700 hover:scale-[1.02] active:scale-95 transition-all duration-300
                   disabled:opacity-70 disabled:cursor-not-allowed
                   w-full md:w-auto flex items-center gap-3
                 `}
@@ -434,7 +498,7 @@ const App: React.FC = () => {
                      <CheckCircle2 className="text-green-500 w-5 h-5" />
                      Step-by-Step Breakdown
                    </h2>
-                   <button onClick={downloadResult} className="text-slate-400 hover:text-blue-600 transition flex items-center gap-1 text-sm font-medium">
+                   <button onClick={downloadPDF} className="text-slate-400 hover:text-blue-600 transition flex items-center gap-1 text-sm font-medium">
                       <Download className="w-4 h-4" /> Download PDF
                    </button>
                 </div>
@@ -464,13 +528,13 @@ const App: React.FC = () => {
                 
                 <h3 className="font-bold flex items-center gap-2 mb-6 relative z-10 text-lg">
                   <BrainCircuit className="w-5 h-5 text-indigo-400" />
-                  Smart Tutor
+                  Real World Scenario
                 </h3>
 
                 {!explanation ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 py-8 relative z-10">
                     <p className="text-indigo-200 text-sm leading-relaxed">
-                      Need a simpler explanation or a real-world example?
+                      Generate a unique real-world scenario and simple explanation for this problem.
                     </p>
                     <button 
                       onClick={handleAIExplain}
@@ -480,7 +544,7 @@ const App: React.FC = () => {
                        {aiLoading ? (
                          <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></span>
                        ) : <Lightbulb className="w-4 h-4" />}
-                       {aiLoading ? 'Thinking...' : 'Generate Explanation'}
+                       {aiLoading ? 'Thinking...' : 'Generate Scenario'}
                     </button>
                   </div>
                 ) : (
@@ -495,9 +559,14 @@ const App: React.FC = () => {
                       <div className="bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/5 flex-1">
                          <div className="flex justify-between items-start mb-2">
                             <h4 className="text-[10px] font-bold text-indigo-300 uppercase tracking-wide">Real World Scenario</h4>
-                            <button onClick={() => copyToClipboard(explanation.realWorldScenario)} className="text-indigo-300 hover:text-white transition">
-                               <Copy className="w-3 h-3" />
-                            </button>
+                            <div className="flex gap-2">
+                              <button onClick={() => copyToClipboard(explanation.realWorldScenario)} className="text-indigo-300 hover:text-white transition" title="Copy Text">
+                                <Copy className="w-3 h-3" />
+                              </button>
+                              <button onClick={() => shareScenario(explanation.realWorldScenario)} className="text-indigo-300 hover:text-white transition" title="Share Scenario">
+                                <Share2 className="w-3 h-3" />
+                              </button>
+                            </div>
                          </div>
                         <p className="text-indigo-50 text-sm leading-relaxed italic">
                           "{explanation.realWorldScenario}"
