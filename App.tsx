@@ -14,7 +14,8 @@ import {
   Repeat2,
   History,
   Trash2,
-  BookOpen
+  BookOpen,
+  X
 } from 'lucide-react';
 import { jsPDF } from "jspdf";
 import { FractionData, OperationType, CalculationResult, VisualizationData, AIExplanation, HistoryItem } from './types';
@@ -111,6 +112,7 @@ const App: React.FC = () => {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [visData, setVisData] = useState<VisualizationData[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [showDocs, setShowDocs] = useState(false);
   
   // AI State
   const [aiLoading, setAiLoading] = useState(false);
@@ -322,8 +324,99 @@ const App: React.FC = () => {
               <h1 className="text-xl font-bold tracking-tight text-slate-900">Fraction Calculator</h1>
             </div>
           </div>
+          
+          <button 
+            onClick={() => setShowDocs(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          >
+            <BookOpen className="w-4 h-4" />
+            <span className="hidden sm:inline">Documentation</span>
+          </button>
         </div>
       </header>
+
+      {/* Documentation Modal */}
+      {showDocs && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <BookOpen className="w-6 h-6 text-blue-600" />
+                User Guide & Documentation
+              </h2>
+              <button onClick={() => setShowDocs(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-500 transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Content - Scrollable */}
+            <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar space-y-8">
+              {/* Section 1: Introduction */}
+              <section>
+                <h3 className="text-lg font-bold text-slate-900 mb-3">Welcome to Fraction Calculator</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  This tool is designed to go beyond simple calculation. It acts as a comprehensive math tutor, helping students, teachers, and professionals understand fraction operations through visualization, step-by-step logic, and AI-powered real-world context.
+                </p>
+              </section>
+
+              {/* Section 2: How to Use */}
+              <section className="bg-blue-50/50 rounded-2xl p-6 border border-blue-100">
+                <h3 className="text-lg font-bold text-blue-900 mb-4">How to Use</h3>
+                <ol className="list-decimal list-inside space-y-3 text-slate-700">
+                  <li className="pl-2"><span className="font-semibold">Enter Fractions:</span> Input the Whole number (optional), Numerator, and Denominator for both fractions.</li>
+                  <li className="pl-2"><span className="font-semibold">Select Operation:</span> Choose Addition (+), Subtraction (-), Multiplication (×), or Division (÷).</li>
+                  <li className="pl-2"><span className="font-semibold">Tools:</span> Use the <span className="inline-flex items-center justify-center p-1 bg-gray-200 rounded-full w-5 h-5 mx-1"><Repeat2 className="w-3 h-3"/></span> Flip button to invert a fraction, or <span className="inline-flex items-center justify-center p-1 bg-gray-200 rounded-full w-5 h-5 mx-1"><ArrowLeftRight className="w-3 h-3"/></span> Swap button to exchange positions.</li>
+                  <li className="pl-2"><span className="font-semibold">Calculate:</span> Press the blue "Calculate Result" button to process.</li>
+                </ol>
+              </section>
+
+              {/* Section 3: Features */}
+              <section>
+                <h3 className="text-lg font-bold text-slate-900 mb-4">Features & Functions</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {[
+                    {icon: Activity, title: "Step-by-Step Breakdown", desc: "Detailed textual explanation of every math step taken to reach the solution."},
+                    {icon: CheckCircle2, title: "Manual Solver View", desc: "Visual math representation showing how to solve the equation on paper."},
+                    {icon: BrainCircuit, title: "AI Real-World Scenarios", desc: "Generates unique word problems and simple explanations using Google Gemini AI."},
+                    {icon: Download, title: "PDF Reports", desc: "Download a professional PDF report of your calculation and steps."},
+                    {icon: History, title: "History Tracker", desc: "Automatically saves your last 10 calculations for quick restoration."},
+                    {icon: RotateCcw, title: "Visualizer", desc: "Interactive charts and area models to visualize fraction magnitude and multiplication."}
+                  ].map((feature, i) => (
+                    <div key={i} className="flex gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                      <div className="mt-1"><feature.icon className="w-5 h-5 text-blue-500" /></div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 text-sm">{feature.title}</h4>
+                        <p className="text-xs text-slate-500 mt-1">{feature.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Section 4: Benefits */}
+              <section className="bg-green-50/50 rounded-2xl p-6 border border-green-100">
+                 <h3 className="text-lg font-bold text-green-900 mb-3">Why use this tool?</h3>
+                 <ul className="list-disc list-inside space-y-2 text-slate-700">
+                    <li><span className="font-semibold">Visual Learning:</span> Seeing fractions as charts and grids helps intuitively understand magnitudes.</li>
+                    <li><span className="font-semibold">Homework Helper:</span> Great for verifying answers and learning the methodology.</li>
+                    <li><span className="font-semibold">Professional Reporting:</span> Generate clean PDF reports for assignments or records.</li>
+                 </ul>
+              </section>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 text-center">
+              <button 
+                onClick={() => setShowDocs(false)}
+                className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium text-sm"
+              >
+                Close Documentation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
         
